@@ -60,7 +60,6 @@ export default function RegistroView() {
             />
 
             <Pressable style={styles.back} onPress={() => router.replace("/")}>
-              <Text style={styles.backText}>‹ Regresar</Text>
             </Pressable>
 
             <View style={styles.form}>
