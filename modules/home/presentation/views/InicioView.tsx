@@ -18,10 +18,8 @@ export default function InicioView() {
   return (
     <View style={styles.screen}>
       
-      {/* Top green bar */}
       <View style={styles.topGreen} />
 
-      {/* Gold bar */}
       <View style={styles.topBar}>
         <Pressable onPress={() => setMenuOpen(true)}>
           <Ionicons name="menu" size={34} color="white" />
@@ -30,7 +28,6 @@ export default function InicioView() {
         <Ionicons name="notifications-outline" size={28} color="white" />
       </View>
 
-      {/* Main content */}
       <View style={styles.content}>
         <Text style={styles.title}>Bienvenidos Venados</Text>
 
@@ -61,11 +58,9 @@ export default function InicioView() {
         </View>
       </View>
 
-      {/* Bottom colors */}
       <View style={styles.bottomGold} />
       <View style={styles.bottomGreen} />
 
-      {/* Drawer menu */}
       {menuOpen && (
         <View style={styles.drawerWrapper}>
           <View style={styles.drawer}>
