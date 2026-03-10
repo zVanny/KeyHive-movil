@@ -38,5 +38,13 @@ export default function AppLayout() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: true }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="inicio" />
+      <Stack.Screen name="contactos" />
+      <Stack.Screen name="reportes" />
+      <Stack.Screen name="casilleros/index" />
+      <Stack.Screen name="casilleros/mi-casillero" />
+    </Stack>
+  );
 }

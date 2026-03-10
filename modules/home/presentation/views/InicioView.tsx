@@ -1,71 +1,286 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
 import { logoutUser } from "../../../auth/application/use-cases/logoutUser";
 
 export default function InicioView() {
-    const router = useRouter();
-    const authRepository = new SupabaseAuthRepository();
+  const router = useRouter();
+  const authRepository = new SupabaseAuthRepository();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Bienvenidos Venados</Text>
+  const handleLogout = async () => {
+    await logoutUser(authRepository);
+    router.replace("/(auth)/login");
+  };
 
-            <Pressable
-                style={styles.btn}
-                onPress={() => router.push("./casilleros")}
-            >
-                <Text style={styles.btnText}>Solicitud de casillero</Text>
-            </Pressable>
+  return (
+    <View style={styles.screen}>
+      
+      {/* Top green bar */}
+      <View style={styles.topGreen} />
 
-            <Pressable
-                style={styles.btn}
-                onPress={() => router.push("./casilleros/mi-casillero")}
-            >
-                <Text style={styles.btnText}>Ver mi casillero</Text>
-            </Pressable>
+      {/* Gold bar */}
+      <View style={styles.topBar}>
+        <Pressable onPress={() => setMenuOpen(true)}>
+          <Ionicons name="menu" size={34} color="white" />
+        </Pressable>
 
-            <Pressable
-                style={styles.btn}
-                onPress={() => router.push("./reportes")}
-            >
-                <Text style={styles.btnText}>Reportes</Text>
-            </Pressable>
+        <Ionicons name="notifications-outline" size={28} color="white" />
+      </View>
 
-            <Pressable
-                style={styles.btn}
-                onPress={() => router.push("./contactos")}
-            >
-                <Text style={styles.btnText}>Contactos</Text>
-            </Pressable>
-            <View style={{ height: 16 }} />
+      {/* Main content */}
+      <View style={styles.content}>
+        <Text style={styles.title}>Bienvenidos Venados</Text>
 
-            <Pressable
-                style={[styles.btn, { backgroundColor: "#222" }]}
-                onPress={async () => {
-                    await logoutUser(authRepository);
-                    router.replace("/(auth)/login");
-                }}
-            >
-                <Text style={styles.btnText}>Cerrar sesión</Text>
-            </Pressable>
+        <Image
+          source={require("../../../../assets/images/venadosutim.jpg")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+
+        <View style={styles.separator} />
+
+        <Text style={styles.section}>Pagina Oficial UTIM:</Text>
+
+        <View style={styles.separator} />
+
+        <Text style={styles.section}>Donde nos encontramos:</Text>
+
+        <View style={styles.locationRow}>
+          <Text style={styles.locationText}>
+            Académico 1{"\n"}Planta Alta
+          </Text>
+
+          <Image
+            source={require("../../../../assets/images/Acade1.jpg")}
+            style={styles.building}
+            resizeMode="cover"
+          />
         </View>
-    );
+      </View>
+
+      {/* Bottom colors */}
+      <View style={styles.bottomGold} />
+      <View style={styles.bottomGreen} />
+
+      {/* Drawer menu */}
+      {menuOpen && (
+        <View style={styles.drawerWrapper}>
+          <View style={styles.drawer}>
+            
+            <View style={styles.drawerHeader}>
+              <Pressable onPress={() => setMenuOpen(false)}>
+                <Ionicons name="close" size={32} color="#111" />
+              </Pressable>
+            </View>
+
+            <View style={styles.userSection}>
+              <Ionicons name="person-circle" size={52} color="#111" />
+              <Text style={styles.userText}>Usuario</Text>
+            </View>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./inicio");
+              }}
+            >
+              <Text style={styles.menuText}>Inicio</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./contactos");
+              }}
+            >
+              <Text style={styles.menuText}>Contactos</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./casilleros");
+              }}
+            >
+              <Text style={styles.menuText}>Solicitación de Casillero</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./reportes");
+              }}
+            >
+              <Text style={styles.menuText}>Reportes</Text>
+            </Pressable>
+
+            <View style={{ flex: 1 }} />
+
+            <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Cerrar Sesión</Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            style={styles.overlay}
+            onPress={() => setMenuOpen(false)}
+          />
+        </View>
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#F4F4F4", padding: 16, gap: 10 },
-    title: {
-        fontSize: 20,
-        fontWeight: "800",
-        textAlign: "center",
-        marginVertical: 12,
-    },
-    btn: {
-        backgroundColor: "#0B3B2E",
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: "center",
-    },
-    btnText: { color: "white", fontWeight: "800" },
+
+  screen: {
+    flex: 1,
+    backgroundColor: "#EDEDED"
+  },
+
+  topGreen: {
+    height: 100,
+    backgroundColor: "#01563A"
+  },
+
+  topBar: {
+    height: 70,
+    backgroundColor: "#B09A1D",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24
+  },
+
+  content: {
+    flex: 1,
+    backgroundColor: "#F2F2F2",
+    paddingHorizontal: 26,
+    paddingTop: 24
+  },
+
+  title: {
+    fontSize: 28,
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 16
+  },
+
+  logo: {
+    width: 200,
+    height: 180,
+    alignSelf: "center",
+    marginBottom: 12
+  },
+
+  separator: {
+    height: 1,
+    backgroundColor: "#777",
+    marginVertical: 18
+  },
+
+  section: {
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "800"
+  },
+
+  locationRow: {
+    marginTop: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+
+  locationText: {
+    fontSize: 22,
+    fontWeight: "800",
+    width: "40%",
+    lineHeight: 28
+  },
+
+  building: {
+    width: 220,
+    height: 140,
+    borderRadius: 6
+  },
+
+  bottomGold: {
+    height: 50,
+    backgroundColor: "#B09A1D"
+  },
+
+  bottomGreen: {
+    height: 45,
+    backgroundColor: "#2F7B1F"
+  },
+
+  drawerWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row"
+  },
+
+  drawer: {
+    width: "60%",
+    backgroundColor: "#F2F2F2",
+    borderRightWidth: 1,
+    borderRightColor: "#BBB"
+  },
+
+  drawerHeader: {
+    marginTop: 100,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#BBB"
+  },
+
+  userSection: {
+    alignItems: "center",
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "#BBB"
+  },
+
+  userText: {
+    marginTop: 6,
+    fontSize: 16
+  },
+
+  menuItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderBottomWidth: 1,
+    borderBottomColor: "#BBB"
+  },
+
+  menuText: {
+    fontSize: 17
+  },
+
+  logoutBtn: {
+    alignSelf: "center",
+    marginBottom: 30,
+    backgroundColor: "#6A6A6A",
+    borderRadius: 30,
+    paddingVertical: 14,
+    paddingHorizontal: 28
+  },
+
+  logoutText: {
+    color: "white",
+    fontWeight: "800"
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.15)"
+  }
+
 });
