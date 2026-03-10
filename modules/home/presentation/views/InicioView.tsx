@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Image } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { logoutUser } from "../../../auth/application/use-cases/logoutUser";
+import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
 
 export default function InicioView() {
   const router = useRouter();
@@ -93,7 +93,7 @@ export default function InicioView() {
                 router.push("./contactos");
               }}
             >
-              <Text style={styles.menuText}>Contactos</Text>
+              <Text style={styles.menuText}>Contactoss</Text>
             </Pressable>
 
             <Pressable
