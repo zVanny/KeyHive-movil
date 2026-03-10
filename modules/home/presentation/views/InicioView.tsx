@@ -103,7 +103,7 @@ export default function InicioView() {
                 router.push("./casilleros");
               }}
             >
-              <Text style={styles.menuText}>Solicitación de Casillero</Text>
+              <Text style={styles.menuText}>Solicitar Casillero</Text>
             </Pressable>
 
             <Pressable
