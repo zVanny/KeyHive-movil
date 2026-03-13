@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
 
   drawerHeader: {
-    paddingTop: 24,
+    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 18,
     borderBottomWidth: 1,
