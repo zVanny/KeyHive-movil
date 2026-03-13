@@ -6,8 +6,10 @@ import {
   StyleSheet,
   Image,
   ScrollView,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
@@ -23,8 +25,17 @@ export default function InicioView() {
     router.replace("/(auth)/login");
   };
 
+  const abrirLink = async (url: string) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <StatusBar style="light" backgroundColor="#01563A" />
+
       <View style={styles.screen}>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -55,16 +66,37 @@ export default function InicioView() {
 
             <View style={styles.separator} />
 
-            <Text style={styles.section}>Pagina Oficial UTIM:</Text>
+            <Text style={styles.section}>Página Oficial UTIM</Text>
+
+            <Pressable
+              style={styles.linkCard}
+              onPress={() => abrirLink("https://sav.utim.edu.mx/")}
+            >
+              <View style={styles.linkLeft}>
+                <View style={styles.linkIconCircle}>
+                  <Ionicons name="globe-outline" size={22} color="#01563A" />
+                </View>
+
+                <View>
+                  <Text style={styles.linkTitle}>Ir al portal oficial</Text>
+                  <Text style={styles.linkSubtitle}>sav.utim.edu.mx</Text>
+                </View>
+              </View>
+
+              <Ionicons name="open-outline" size={22} color="#01563A" />
+            </Pressable>
 
             <View style={styles.separator} />
 
-            <Text style={styles.section}>Donde nos encontramos:</Text>
+            <Text style={styles.section}>Dónde nos encontramos</Text>
 
-            <View style={styles.locationRow}>
-              <Text style={styles.locationText}>
-                Académico 1{"\n"}Planta Alta
-              </Text>
+            <View style={styles.locationCard}>
+              <View style={styles.locationTextBox}>
+                <Text style={styles.locationLabel}>Ubicación</Text>
+                <Text style={styles.locationText}>
+                  Académico 1{"\n"}Planta Alta
+                </Text>
+              </View>
 
               <Image
                 source={require("../../../../assets/images/Acade1.jpg")}
@@ -153,19 +185,23 @@ export default function InicioView() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#EDEDED",
+    backgroundColor: "#01563A",
   },
+
   screen: {
     flex: 1,
     backgroundColor: "#EDEDED",
   },
+
   scroll: {
     flexGrow: 1,
   },
+
   topGreen: {
     height: 90,
     backgroundColor: "#01563A",
   },
+
   topBar: {
     height: 64,
     backgroundColor: "#B09A1D",
@@ -174,71 +210,152 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
   },
+
   content: {
     flex: 1,
     backgroundColor: "#F2F2F2",
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    paddingBottom: 30,
   },
+
   title: {
     fontSize: 28,
     fontWeight: "900",
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 18,
+    color: "#111",
   },
+
   logo: {
-    width: 180,
-    height: 160,
+    width: 190,
+    height: 170,
     alignSelf: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
+
   separator: {
     height: 1,
-    backgroundColor: "#777",
+    backgroundColor: "#8A8A8A",
     marginVertical: 18,
   },
+
   section: {
     textAlign: "center",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
+    color: "#111",
+    marginBottom: 14,
   },
-  locationRow: {
-    marginTop: 22,
+
+  linkCard: {
+    backgroundColor: "#FAFAFA",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D8D8D8",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  locationText: {
-    fontSize: 20,
-    fontWeight: "800",
+
+  linkLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
-    lineHeight: 26,
   },
+
+  linkIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#EAF3EC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  linkTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#111",
+  },
+
+  linkSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 2,
+  },
+
+  locationCard: {
+    marginTop: 4,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D8D8D8",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+
+  locationTextBox: {
+    flex: 1,
+  },
+
+  locationLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#B09A1D",
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+
+  locationText: {
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 30,
+    color: "#111",
+  },
+
   building: {
-    width: 180,
+    width: 170,
     height: 120,
-    borderRadius: 6,
+    borderRadius: 12,
   },
+
   bottomGold: {
     height: 46,
     backgroundColor: "#B09A1D",
   },
+
   bottomGreen: {
     height: 40,
     backgroundColor: "#2F7B1F",
   },
+
   drawerWrapper: {
     ...StyleSheet.absoluteFillObject,
     flexDirection: "row",
   },
+
   drawer: {
     width: "70%",
     backgroundColor: "#F2F2F2",
     borderRightWidth: 1,
     borderRightColor: "#BBB",
   },
+
   drawerHeader: {
     paddingTop: 24,
     paddingHorizontal: 20,
@@ -247,25 +364,32 @@ const styles = StyleSheet.create({
     borderBottomColor: "#BBB",
     backgroundColor: "#F2F2F2",
   },
+
   userSection: {
     alignItems: "center",
     paddingVertical: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#BBB",
   },
+
   userText: {
     marginTop: 6,
     fontSize: 16,
+    color: "#111",
   },
+
   menuItem: {
     paddingVertical: 14,
     paddingHorizontal: 26,
     borderBottomWidth: 1,
     borderBottomColor: "#BBB",
   },
+
   menuText: {
     fontSize: 17,
+    color: "#111",
   },
+
   logoutBtn: {
     alignSelf: "center",
     marginBottom: 30,
@@ -274,10 +398,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 28,
   },
+
   logoutText: {
     color: "white",
     fontWeight: "800",
   },
+
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.15)",
