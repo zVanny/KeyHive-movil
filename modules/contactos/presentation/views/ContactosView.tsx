@@ -2,12 +2,6 @@ import { FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
-<<<<<<< HEAD
-import { Linking, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { logoutUser } from "../../../auth/application/use-cases/logoutUser";
-import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
-=======
 import {
   Linking,
   Pressable,
@@ -18,10 +12,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
 import { logoutUser } from "../../../auth/application/use-cases/logoutUser";
->>>>>>> c5f22d07a2d9a2248d3c9eb3e9caef59f628673d
+import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
 
 type ContactItemProps = {
   label: string;
