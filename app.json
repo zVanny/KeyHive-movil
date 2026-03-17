@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/unaAbeja.png",
+    "backgroundColor": "#237513",
     "scheme": "keyhive",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,7 +14,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#237513",
         "foregroundImage": "./assets/images/keyhive_converted.png",
         "backgroundImage": "./assets/images/keyhive_converted.png",
         "monochromeImage": "./assets/images/keyhive_converted.png"
@@ -33,9 +34,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#16782A",
+          "backgroundColor": "#237513",
           "dark": {
-            "backgroundColor": "#16782A"
+            "backgroundColor": "#237513"
           }
         }
       ]

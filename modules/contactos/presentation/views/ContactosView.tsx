@@ -1,15 +1,19 @@
 import { FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useState } from "react";
 import {
   Linking,
-  SafeAreaView,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
+import { logoutUser } from "../../../auth/application/use-cases/logoutUser";
 
 type ContactItemProps = {
   label: string;
@@ -27,17 +31,35 @@ function ContactItem({ label, icon, onPress }: ContactItemProps) {
 }
 
 export default function ContactosView() {
-  const abrirLink = (url: string) => {
-    Linking.openURL(url);
+  const router = useRouter();
+  const authRepository = new SupabaseAuthRepository();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const abrirLink = async (url: string) => {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logoutUser(authRepository);
+    router.replace("/(auth)/login");
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar style="light" backgroundColor="#0E5A2B" />
 
-      {/* Barra superior */}
       <View style={styles.topGreen} />
-      <View style={styles.topGold} />
+
+      <View style={styles.topGold}>
+        <Pressable onPress={() => setMenuOpen(true)}>
+          <Ionicons name="menu" size={34} color="white" />
+        </Pressable>
+
+        <Ionicons name="notifications-outline" size={28} color="white" />
+      </View>
 
       <View style={styles.main}>
         <ScrollView
@@ -46,7 +68,6 @@ export default function ContactosView() {
         >
           <Text style={styles.title}>Contactos</Text>
 
-          {/* Tarjeta redes */}
           <View style={styles.card}>
             <ContactItem
               label="Facebook"
@@ -60,7 +81,9 @@ export default function ContactosView() {
 
             <ContactItem
               label="Instagram"
-              icon={<Ionicons name="logo-instagram" size={24} color="#0E5A2B" />}
+              icon={
+                <Ionicons name="logo-instagram" size={24} color="#0E5A2B" />
+              }
               onPress={() =>
                 abrirLink(
                   "https://www.instagram.com/soyutim?igsh=a3doeWh2aWcwYjBi"
@@ -87,7 +110,6 @@ export default function ContactosView() {
             />
           </View>
 
-          {/* Servicios escolares */}
           <TouchableOpacity
             style={styles.emailBox}
             onPress={() =>
@@ -102,9 +124,76 @@ export default function ContactosView() {
         </ScrollView>
       </View>
 
-      {/* Barra inferior */}
       <View style={styles.bottomGold} />
       <View style={styles.bottomGreen} />
+
+      {menuOpen && (
+        <View style={styles.drawerWrapper}>
+          <View style={styles.drawer}>
+            <View style={styles.drawerHeader}>
+              <Pressable onPress={() => setMenuOpen(false)}>
+                <Ionicons name="close" size={32} color="#111" />
+              </Pressable>
+            </View>
+
+            <View style={styles.userSection}>
+              <Ionicons name="person-circle" size={52} color="#111" />
+              <Text style={styles.userText}>Usuario</Text>
+            </View>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./inicio");
+              }}
+            >
+              <Text style={styles.menuText}>Inicio</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./contactos");
+              }}
+            >
+              <Text style={styles.menuText}>Contactos</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./casilleros");
+              }}
+            >
+              <Text style={styles.menuText}>Solicitación de Casillero</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("./reportes");
+              }}
+            >
+              <Text style={styles.menuText}>Reportes</Text>
+            </Pressable>
+
+            <View style={{ flex: 1 }} />
+
+            <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Cerrar Sesión</Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            style={styles.overlay}
+            onPress={() => setMenuOpen(false)}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -121,8 +210,12 @@ const styles = StyleSheet.create({
   },
 
   topGold: {
-    height: 40,
+    height: 64,
     backgroundColor: "#9C8600",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
   },
 
   main: {
@@ -134,6 +227,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 30,
     paddingBottom: 40,
+    flexGrow: 1,
   },
 
   title: {
@@ -205,6 +299,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: "#111",
+    textAlign: "center",
   },
 
   bottomGold: {
@@ -215,5 +310,70 @@ const styles = StyleSheet.create({
   bottomGreen: {
     height: 35,
     backgroundColor: "#2D7A1F",
+  },
+
+  drawerWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row",
+  },
+
+  drawer: {
+    width: "70%",
+    backgroundColor: "#F2F2F2",
+    borderRightWidth: 1,
+    borderRightColor: "#BBB",
+  },
+
+  drawerHeader: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: "#BBB",
+    backgroundColor: "#F2F2F2",
+  },
+
+  userSection: {
+    alignItems: "center",
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "#BBB",
+  },
+
+  userText: {
+    marginTop: 6,
+    fontSize: 16,
+    color: "#111",
+  },
+
+  menuItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderBottomWidth: 1,
+    borderBottomColor: "#BBB",
+  },
+
+  menuText: {
+    fontSize: 17,
+    color: "#111",
+  },
+
+  logoutBtn: {
+    alignSelf: "center",
+    marginBottom: 30,
+    backgroundColor: "#6A6A6A",
+    borderRadius: 30,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+  },
+
+  logoutText: {
+    color: "white",
+    fontWeight: "800",
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.15)",
   },
 });
