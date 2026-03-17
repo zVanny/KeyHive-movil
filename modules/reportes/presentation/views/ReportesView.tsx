@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -12,11 +13,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { createReport } from "../../application/use-cases/createReport";
-import { SupabaseReporteRepository } from "../../infrastructure/repositories/SupabaseReporteRepository";
-import type { Reporte } from "../../domain/entities/Reporte";
 import { getReports } from "../../application/use-cases/getReportes";
+import type { Reporte } from "../../domain/entities/Reporte";
+import { SupabaseReporteRepository } from "../../infrastructure/repositories/SupabaseReporteRepository";
 
 function getTodayForInput(): string {
   const now = new Date();
@@ -229,7 +229,7 @@ export default function ReportesView() {
               <ActivityIndicator color="#0E5A2B" />
             </View>
           ) : misReportes.length === 0 ? (
-            <Text style={styles.emptyText}>Aún no has enviado reportes.</Text>
+            <Text style={styles.emptyText}>Aún no has enviado reportes </Text>
           ) : (
             misReportes.slice(0, 5).map((item) => (
               <View key={item.id} style={styles.reportItem}>
