@@ -2,15 +2,7 @@ import { FontAwesome, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
-import {
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { logoutUser } from "../../../auth/application/use-cases/logoutUser";
 import { SupabaseAuthRepository } from "../../../auth/infrastructure/repositories/SupabaseAuthRepository";
@@ -73,9 +65,7 @@ export default function ContactosView() {
               label="Facebook"
               icon={<FontAwesome name="facebook" size={24} color="#0E5A2B" />}
               onPress={() =>
-                abrirLink(
-                  "https://www.facebook.com/share/1DamGfeiJy/?mibextid=wwXIfr"
-                )
+                abrirLink("https://www.facebook.com/share/1DamGfeiJy/?mibextid=wwXIfr")
               }
             />
 
@@ -377,3 +367,4 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.15)",
   },
 });
+//modifique el link jsjs
