@@ -15,7 +15,6 @@
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/keyhive_converted.png",
-        "backgroundImage": "./assets/images/keyhive_converted.png",
         "monochromeImage": "./assets/images/keyhive_converted.png"
       },
       "edgeToEdgeEnabled": true,
@@ -41,8 +40,7 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
