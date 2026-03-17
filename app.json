@@ -4,7 +4,8 @@
     "slug": "KeyHive",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/keyhive_converted.png",
+    "icon": "./assets/images/unaAbeja.png",
+    "backgroundColor": "#237513",
     "scheme": "keyhive",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,9 +14,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#237513",
         "foregroundImage": "./assets/images/keyhive_converted.png",
-        "backgroundImage": "./assets/images/keyhive_converted.png",
         "monochromeImage": "./assets/images/keyhive_converted.png"
       },
       "edgeToEdgeEnabled": true,
@@ -33,16 +33,15 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#237513",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#237513"
           }
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
