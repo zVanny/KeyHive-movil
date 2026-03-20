@@ -1,12 +1,13 @@
 import type {
   Casillero,
   CrearSolicitudCasilleroDto,
-  MiPerfilCasillero,
+  MiCasillero,
+  PerfilAlumno,
 } from "../entities/Casillero";
 
 export interface CasilleroRepository {
   getCasilleros(): Promise<Casillero[]>;
-  getMiCasillero(): Promise<Casillero | null>;
-  getMiPerfil(): Promise<MiPerfilCasillero>;
-  crearSolicitud(data: CrearSolicitudCasilleroDto): Promise<void>;
+  getPerfilActual(): Promise<PerfilAlumno>;
+  getMiCasillero(): Promise<MiCasillero | null>;
+  crearSolicitudCasillero(data: CrearSolicitudCasilleroDto): Promise<void>;
 }
