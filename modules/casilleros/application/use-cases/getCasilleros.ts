@@ -2,7 +2,7 @@ import type { Casillero } from "../../domain/entities/Casillero";
 import type { CasilleroRepository } from "../../domain/repositories/CasilleroRepository";
 
 export async function getCasilleros(
-  casilleroRepository: CasilleroRepository
+  repository: CasilleroRepository
 ): Promise<Casillero[]> {
-  return casilleroRepository.getCasilleros();
+  return repository.getCasilleros();
 }
