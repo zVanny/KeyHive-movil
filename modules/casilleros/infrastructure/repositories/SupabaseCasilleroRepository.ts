@@ -45,6 +45,16 @@ type MiSolicitudRow = {
   } | null;
 };
 
+type SolicitudActualRow = {
+  id: number;
+  user_id: string;
+  casillero_id: number | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  estado: EstadoSolicitud;
+  created_at: string;
+};
+
 export class SupabaseCasilleroRepository implements CasilleroRepository {
   private async getCurrentUser() {
     const {
@@ -66,7 +76,9 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       .order("no_casillero", { ascending: true });
 
     if (casillerosError) {
-      throw new Error(casillerosError.message || "No se pudieron cargar los casilleros.");
+      throw new Error(
+        casillerosError.message || "No se pudieron cargar los casilleros."
+      );
     }
 
     const { data: solicitudesData, error: solicitudesError } = await supabase
@@ -75,7 +87,9 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       .in("estado", ["PENDIENTE", "ASIGNADO"]);
 
     if (solicitudesError) {
-      throw new Error(solicitudesError.message || "No se pudieron cargar las solicitudes.");
+      throw new Error(
+        solicitudesError.message || "No se pudieron cargar las solicitudes."
+      );
     }
 
     const casillerosBloqueados = new Set(
@@ -96,7 +110,11 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
         noCasillero: row.no_casillero,
         area: row.area,
         planta: row.planta,
-        estado: disponible ? "DISPONIBLE" : row.estado === "REPARACION" ? "REPARACION" : "OCUPADO",
+        estado: disponible
+          ? "DISPONIBLE"
+          : row.estado === "REPARACION"
+          ? "REPARACION"
+          : "OCUPADO",
         disponible,
       };
     });
@@ -178,7 +196,9 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
     };
   }
 
-  async crearSolicitudCasillero(data: CrearSolicitudCasilleroDto): Promise<void> {
+  async crearSolicitudCasillero(
+    data: CrearSolicitudCasilleroDto
+  ): Promise<void> {
     const user = await this.getCurrentUser();
 
     const solicitudActual = await this.getMiCasillero();
@@ -214,25 +234,83 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       .maybeSingle();
 
     if (bloqueoError) {
-      throw new Error(bloqueoError.message || "No se pudo validar la solicitud del casillero.");
+      throw new Error(
+        bloqueoError.message || "No se pudo validar la solicitud del casillero."
+      );
     }
 
     if (solicitudDeEseCasillero) {
       throw new Error("Ese casillero ya fue solicitado por otro alumno.");
     }
 
-    const { error: insertError } = await supabase.from("solicitudes_casillero").insert({
-      user_id: user.id,
-      casillero_id: data.casilleroId,
-      area: casillero.area,
-      planta: casillero.planta,
-      fecha_inicio: data.fechaInicio,
-      fecha_fin: data.fechaFin,
-      estado: "PENDIENTE",
-    });
+    const { error: insertError } = await supabase
+      .from("solicitudes_casillero")
+      .insert({
+        user_id: user.id,
+        casillero_id: data.casilleroId,
+        area: casillero.area,
+        planta: casillero.planta,
+        fecha_inicio: data.fechaInicio,
+        fecha_fin: data.fechaFin,
+        estado: "PENDIENTE",
+      });
 
     if (insertError) {
       throw new Error(insertError.message || "No se pudo guardar la solicitud.");
+    }
+  }
+
+  async darDeBajaMiCasillero(): Promise<void> {
+    const user = await this.getCurrentUser();
+
+    const { data: solicitudData, error: solicitudError } = await supabase
+      .from("solicitudes_casillero")
+      .select("id, user_id, casillero_id, fecha_inicio, fecha_fin, estado, created_at")
+      .eq("user_id", user.id)
+      .in("estado", ["PENDIENTE", "ASIGNADO"])
+      .order("created_at", { ascending: false })
+      .maybeSingle();
+
+    if (solicitudError) {
+      throw new Error(solicitudError.message || "No se pudo consultar tu solicitud.");
+    }
+
+    if (!solicitudData) {
+      throw new Error("No tienes un casillero o solicitud activa.");
+    }
+
+    const solicitud = solicitudData as SolicitudActualRow;
+
+    if (solicitud.estado === "ASIGNADO" && solicitud.casillero_id) {
+      const { error: liberarCasilleroError } = await supabase
+        .from("casilleros")
+        .update({
+          estado: "DISPONIBLE",
+          asignado_a: null,
+          asignado_en: null,
+          fecha_inicio: null,
+          fecha_fin: null,
+        })
+        .eq("id", solicitud.casillero_id);
+
+      if (liberarCasilleroError) {
+        throw new Error(
+          liberarCasilleroError.message || "No se pudo liberar el casillero."
+        );
+      }
+    }
+
+    const { error: cancelarSolicitudError } = await supabase
+      .from("solicitudes_casillero")
+      .update({
+        estado: "CANCELADO",
+      })
+      .eq("id", solicitud.id);
+
+    if (cancelarSolicitudError) {
+      throw new Error(
+        cancelarSolicitudError.message || "No se pudo dar de baja el casillero."
+      );
     }
   }
 }

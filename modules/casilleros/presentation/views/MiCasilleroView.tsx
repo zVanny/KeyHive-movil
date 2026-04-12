@@ -1,81 +1,69 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { crearSolicitudCasillero } from "../../application/use-cases/crearSolicitudCasillero";
+import { darDeBajaMiCasillero } from "../../application/use-cases/darDeBajaMiCasillero";
 import { getMiCasillero } from "../../application/use-cases/getMiCasillero";
-import type { PerfilAlumno } from "../../domain/entities/Casillero";
+import type { MiCasillero } from "../../domain/entities/Casillero";
 import { SupabaseCasilleroRepository } from "../../infrastructure/repositories/SupabaseCasilleroRepository";
 
-function formatDateInput(value: string) {
-  const clean = value.replace(/\D/g, "").slice(0, 8);
-  if (clean.length <= 2) return clean;
-  if (clean.length <= 4) return `${clean.slice(0, 2)}/${clean.slice(2)}`;
-  return `${clean.slice(0, 2)}/${clean.slice(2, 4)}/${clean.slice(4)}`;
+function formatDate(value: string | null) {
+  if (!value) return "--/--/----";
+  const [yyyy, mm, dd] = value.split("-");
+  if (!yyyy || !mm || !dd) return value;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
-function parseDateToDb(value: string): string | null {
-  const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) return null;
+function getStatusConfig(status: string) {
+  if (status === "ASIGNADO") {
+    return {
+      label: "Asignado",
+      bg: "#E8F5E9",
+      color: "#1B5E20",
+      border: "#B7DFC0",
+      icon: "checkmark-circle" as const,
+    };
+  }
 
-  const [, dd, mm, yyyy] = match;
-  const iso = `${yyyy}-${mm}-${dd}`;
-  const test = new Date(`${iso}T00:00:00`);
-
-  if (Number.isNaN(test.getTime())) return null;
-  return iso;
+  return {
+    label: "Pendiente",
+    bg: "#FFF8E1",
+    color: "#8A5A00",
+    border: "#E8D69A",
+    icon: "time" as const,
+  };
 }
 
 export default function MiCasilleroView() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ casilleroId?: string; noCasillero?: string }>();
   const repository = useMemo(() => new SupabaseCasilleroRepository(), []);
 
-  const [perfil, setPerfil] = useState<PerfilAlumno | null>(null);
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [miCasillero, setMiCasillero] = useState<MiCasillero | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
-  const casilleroId = Number(params.casilleroId ?? "0");
-  const noCasillero = params.noCasillero ?? "...";
-
-  async function loadData() {
+  async function loadMiCasillero() {
     try {
       setLoading(true);
-
-      const solicitudActual = await getMiCasillero(repository);
-
-      if (solicitudActual) {
-        Alert.alert(
-          "Aviso",
-          `Ya tienes una solicitud activa para el casillero ${solicitudActual.noCasillero}.`,
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/casilleros"),
-            },
-          ]
-        );
-        return;
-      }
-
-      const perfilActual = await repository.getPerfilActual();
-      setPerfil(perfilActual);
+      const data = await getMiCasillero(repository);
+      setMiCasillero(data);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "No se pudieron cargar tus datos.";
+        error instanceof Error
+          ? error.message
+          : "No se pudo consultar tu casillero.";
       Alert.alert("Error", message);
     } finally {
       setLoading(false);
@@ -83,67 +71,67 @@ export default function MiCasilleroView() {
   }
 
   useEffect(() => {
-    loadData();
+    loadMiCasillero();
   }, []);
 
-  async function handleSave() {
-    if (!casilleroId) {
-      Alert.alert("Error", "No se recibió un casillero válido.");
-      return;
-    }
+  async function confirmDarDeBaja() {
+    Alert.alert(
+      "Dar de baja casillero",
+      "¿Seguro que quieres dar de baja tu casillero? Esta acción cancelará tu solicitud o liberará tu casillero actual.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Sí, dar de baja",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setRemoving(true);
+              await darDeBajaMiCasillero(repository);
+              setMiCasillero(null);
 
-    const fechaInicioDb = parseDateToDb(fechaInicio);
-    const fechaFinDb = parseDateToDb(fechaFin);
-
-    if (!fechaInicioDb || !fechaFinDb) {
-      Alert.alert("Fechas inválidas", "Usa el formato DD/MM/AAAA en ambas fechas.");
-      return;
-    }
-
-    if (fechaFinDb < fechaInicioDb) {
-      Alert.alert("Fechas inválidas", "La fecha fin no puede ser anterior a la fecha inicio.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      await crearSolicitudCasillero(repository, {
-        casilleroId,
-        fechaInicio: fechaInicioDb,
-        fechaFin: fechaFinDb,
-      });
-
-      Alert.alert(
-        "Listo",
-        `Tu solicitud para el casillero ${noCasillero} fue enviada.`,
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/casilleros"),
+              Alert.alert(
+                "Listo",
+                "Tu casillero fue dado de baja correctamente."
+              );
+            } catch (error) {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "No se pudo dar de baja el casillero.";
+              Alert.alert("Error", message);
+            } finally {
+              setRemoving(false);
+            }
           },
-        ]
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "No se pudo guardar la solicitud.";
-      Alert.alert("Error", message);
-    } finally {
-      setSaving(false);
-    }
+        },
+      ]
+    );
   }
 
+  const statusConfig = miCasillero
+    ? getStatusConfig(miCasillero.estado)
+    : null;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="light" backgroundColor="#0E5A2B" />
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar style="light" backgroundColor="#074F2A" />
 
-      <View style={styles.topGreen} />
+      <View style={styles.headerWrap}>
+        <View style={styles.goldBar}>
+          <Pressable
+            onPress={() => setMenuOpen(true)}
+            style={styles.iconButton}
+          >
+            <Ionicons name="menu" size={30} color="#FFFFFF" />
+          </Pressable>
 
-      <View style={styles.topGold}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={28} color="white" />
-          <Text style={styles.backText}>Regresar</Text>
-        </Pressable>
+          <Text style={styles.headerTitle}>Mi Casillero</Text>
+
+          <View style={styles.iconButton} />
+        </View>
       </View>
 
       <ScrollView
@@ -151,106 +139,255 @@ export default function MiCasilleroView() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Datos del Alumno</Text>
-
-        <View style={styles.separator} />
+        <Text style={styles.title}>Mi casillero</Text>
+        <Text style={styles.subtitle}>
+          Consulta el estado actual de tu solicitud o tu casillero asignado
+        </Text>
 
         {loading ? (
           <View style={styles.centerState}>
-            <ActivityIndicator color="#0E5A2B" />
+            <ActivityIndicator size="large" color="#0E5A2B" />
+            <Text style={styles.loadingText}>Cargando información...</Text>
+          </View>
+        ) : !miCasillero ? (
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="file-tray-outline" size={42} color="#6B7280" />
+            </View>
+
+            <Text style={styles.emptyTitle}>No tienes un casillero activo</Text>
+            <Text style={styles.emptyText}>
+              Todavía no tienes una solicitud pendiente ni un casillero asignado.
+            </Text>
+
+            <Pressable
+              style={styles.primaryButton}
+              onPress={() => router.push("/casilleros")}
+            >
+              <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.primaryButtonText}>Solicitar casillero</Text>
+            </Pressable>
           </View>
         ) : (
-          <View style={styles.formSection}>
-            <View style={styles.row}>
-              <Text style={styles.label}>No. Casillero:</Text>
-              <View style={styles.smallBadge}>
-                <Text style={styles.badgeText}>{noCasillero}</Text>
+          <>
+            <View style={styles.heroCard}>
+              <View style={styles.numberBadge}>
+                <Text style={styles.numberText}>#{miCasillero.noCasillero}</Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: statusConfig?.bg,
+                    borderColor: statusConfig?.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={statusConfig?.icon ?? "time"}
+                  size={16}
+                  color={statusConfig?.color ?? "#111"}
+                />
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    { color: statusConfig?.color ?? "#111" },
+                  ]}
+                >
+                  {statusConfig?.label}
+                </Text>
               </View>
             </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Nombre:</Text>
-              <TextInput
-                value={perfil?.nombre ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-              />
+            <View style={styles.lockerCard}>
+              <View style={styles.lockerBox}>
+                <View style={styles.lockerTopBar} />
+
+                <View style={styles.lockerInner}>
+                  <Text style={styles.lockerNumber}>
+                    {String(miCasillero.noCasillero).padStart(2, "0")}
+                  </Text>
+
+                  <View style={styles.handleArea}>
+                    <View style={styles.handleHorizontal} />
+                    <View style={styles.handleDot} />
+                  </View>
+
+                  <View
+                    style={[
+                      styles.statusPillLarge,
+                      {
+                        backgroundColor: statusConfig?.bg,
+                        borderColor: statusConfig?.border,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: statusConfig?.color ?? "#111" },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.statusPillLargeText,
+                        { color: statusConfig?.color ?? "#111" },
+                      ]}
+                    >
+                      {statusConfig?.label}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Correo:</Text>
-              <TextInput
-                value={perfil?.correo ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-                autoCapitalize="none"
-              />
-            </View>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Área</Text>
+                <Text style={styles.infoValue}>{miCasillero.area}</Text>
+              </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Matrícula:</Text>
-              <TextInput
-                value={perfil?.matricula ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-              />
-            </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Planta</Text>
+                <Text style={styles.infoValue}>{miCasillero.planta}</Text>
+              </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Carrera:</Text>
-              <TextInput
-                value={perfil?.carrera ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-              />
-            </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Fecha</Text>
+                <Text style={styles.infoValue}>
+                  {formatDate(miCasillero.fechaInicio)} -{" "}
+                  {formatDate(miCasillero.fechaFin)}
+                </Text>
+              </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Fecha Inicio:</Text>
-              <TextInput
-                value={fechaInicio}
-                onChangeText={(text) => setFechaInicio(formatDateInput(text))}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="#878787"
-                keyboardType="numeric"
-                style={styles.input}
-              />
-              <Ionicons name="help-circle-outline" size={22} color="#111" />
-            </View>
-
-            <View style={styles.row}>
-              <Text style={styles.label}>Fecha Fin:</Text>
-              <TextInput
-                value={fechaFin}
-                onChangeText={(text) => setFechaFin(formatDateInput(text))}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="#878787"
-                keyboardType="numeric"
-                style={styles.input}
-              />
-              <Ionicons name="help-circle-outline" size={22} color="#111" />
+              <View style={styles.infoRowLast}>
+                <Text style={styles.infoLabel}>Estado</Text>
+                <Text style={styles.infoValue}>{miCasillero.estado}</Text>
+              </View>
             </View>
 
             <Pressable
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
+              style={[styles.dangerButton, removing && styles.disabledButton]}
+              onPress={confirmDarDeBaja}
+              disabled={removing}
             >
-              {saving ? (
-                <ActivityIndicator color="#111" />
+              {removing ? (
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <>
-                  <Ionicons name="save-outline" size={28} color="#111" />
-                  <Text style={styles.saveButtonText}>Guardar</Text>
+                  <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.dangerButtonText}>Dar de baja</Text>
                 </>
               )}
             </Pressable>
-          </View>
+          </>
         )}
       </ScrollView>
 
-      <View style={styles.bottomGold} />
-      <View style={styles.bottomGreen} />
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <View style={styles.modalContainer}>
+          <Pressable
+            style={styles.overlay}
+            onPress={() => setMenuOpen(false)}
+          />
+
+          <SafeAreaView
+            style={styles.drawerSafeArea}
+            edges={["top", "bottom", "left"]}
+          >
+            <View style={styles.drawer}>
+              <View style={styles.drawerHeader}>
+                <View style={styles.drawerTopRow}>
+                  <Text style={styles.drawerTitle}>Menú</Text>
+
+                  <Pressable
+                    onPress={() => setMenuOpen(false)}
+                    style={styles.closeButton}
+                  >
+                    <Ionicons name="close" size={28} color="#111827" />
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.userSection}>
+                <Ionicons name="person-circle" size={54} color="#074F2A" />
+                <Text style={styles.userText}>Usuario</Text>
+              </View>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/inicio");
+                }}
+              >
+                <Ionicons name="home-outline" size={22} color="#111827" />
+                <Text style={styles.menuText}>Inicio</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/contactos");
+                }}
+              >
+                <Ionicons name="call-outline" size={22} color="#111827" />
+                <Text style={styles.menuText}>Contactos</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/casilleros");
+                }}
+              >
+                <Ionicons name="cube-outline" size={22} color="#111827" />
+                <Text style={styles.menuText}>Solicitación de Casillero</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/casilleros/mi-casillero");
+                }}
+              >
+                <Ionicons
+                  name="file-tray-full-outline"
+                  size={22}
+                  color="#111827"
+                />
+                <Text style={styles.menuText}>Ver mi Casillero</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/reportes");
+                }}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={22}
+                  color="#111827"
+                />
+                <Text style={styles.menuText}>Reportes</Text>
+              </Pressable>
+
+              <View style={styles.drawerSpacer} />
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -258,119 +395,425 @@ export default function MiCasilleroView() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0E5A2B",
+    backgroundColor: "#074F2A",
   },
-  topGreen: {
-    height: 40,
-    backgroundColor: "#0E5A2B",
+
+  headerWrap: {
+    backgroundColor: "#074F2A",
+    paddingBottom: 10,
   },
-  topGold: {
-    height: 30,
-    backgroundColor: "#9C8600",
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  backButton: {
+
+  goldBar: {
+    marginHorizontal: 14,
+    backgroundColor: "#8B7400",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
+    justifyContent: "space-between",
   },
-  backText: {
-    color: "white",
-    fontSize: 17,
-    fontWeight: "700",
-    marginLeft: 2,
+
+  iconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+
   main: {
     flex: 1,
-    backgroundColor: "#ECECEC",
+    backgroundColor: "#F4F4F6",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
+
   scrollContent: {
-    paddingBottom: 28,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "900",
-    textAlign: "center",
-    color: "#111",
-    marginTop: 22,
-    marginBottom: 18,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#8F8F8F",
-  },
-  centerState: {
-    paddingVertical: 50,
-    alignItems: "center",
-  },
-  formSection: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
-  row: {
-    flexDirection: "row",
+
+  title: {
+    fontSize: 34,
+    fontWeight: "900",
+    color: "#111827",
+    textAlign: "center",
+  },
+
+  subtitle: {
+    fontSize: 15,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+
+  centerState: {
+    paddingTop: 80,
+    alignItems: "center",
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 28,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  emptyIconWrap: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
+  },
+
+  emptyText: {
+    fontSize: 15,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 22,
+    marginTop: 10,
+    marginBottom: 22,
+  },
+
+  heroCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
     alignItems: "center",
     marginBottom: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  label: {
-    width: 115,
-    fontSize: 17,
-    color: "#111",
-  },
-  smallBadge: {
-    width: 76,
-    height: 36,
-    backgroundColor: "#D9D6D6",
-    borderRadius: 14,
+
+  numberBadge: {
+    minWidth: 160,
+    height: 62,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 28,
+    marginBottom: 14,
   },
-  badgeText: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "600",
+
+  numberText: {
+    fontSize: 34,
+    fontWeight: "900",
+    color: "#111827",
   },
-  input: {
-    flex: 1,
-    height: 36,
-    backgroundColor: "#D9D6D6",
-    borderRadius: 14,
+
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 999,
     paddingHorizontal: 14,
-    fontSize: 16,
-    color: "#111",
-    marginRight: 10,
+    paddingVertical: 8,
   },
-  inputDisabled: {
-    color: "#555",
+
+  statusBadgeText: {
+    fontSize: 14,
+    fontWeight: "800",
+    marginLeft: 8,
   },
-  saveButton: {
-    marginTop: 44,
-    alignSelf: "center",
-    minWidth: 200,
-    height: 58,
-    borderRadius: 22,
-    backgroundColor: "#D9D3D3",
+
+  lockerCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingVertical: 26,
+    alignItems: "center",
+    marginBottom: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  lockerBox: {
+    width: 230,
+    height: 280,
+    backgroundColor: "#F3F6F9",
+    borderWidth: 2,
+    borderColor: "#D9DDE3",
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+
+  lockerTopBar: {
+    height: 18,
+    backgroundColor: "#D9DDE4",
+    borderBottomWidth: 1,
+    borderBottomColor: "#C9CED6",
+  },
+
+  lockerInner: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 26,
+    paddingBottom: 22,
+    paddingHorizontal: 16,
+  },
+
+  lockerNumber: {
+    fontSize: 44,
+    fontWeight: "900",
+    color: "#111827",
+    letterSpacing: 1,
+  },
+
+  handleArea: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 8,
+  },
+
+  handleHorizontal: {
+    width: 44,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#AAB2BD",
+    marginBottom: 8,
+  },
+
+  handleDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#7B8794",
+  },
+
+  statusPillLarge: {
+    minHeight: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    paddingHorizontal: 24,
   },
-  saveButtonDisabled: {
+
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+
+  statusPillLargeText: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  infoCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginBottom: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  infoRow: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+
+  infoRowLast: {
+    paddingVertical: 16,
+  },
+
+  infoLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6B7280",
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+
+  infoValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  primaryButton: {
+    height: 54,
+    minWidth: 220,
+    borderRadius: 18,
+    backgroundColor: "#0E5A2B",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    paddingHorizontal: 22,
+  },
+
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginLeft: 10,
+  },
+
+  dangerButton: {
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: "#C62828",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    paddingHorizontal: 22,
+    marginBottom: 20,
+  },
+
+  dangerButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    marginLeft: 10,
+  },
+
+  disabledButton: {
     opacity: 0.7,
   },
-  saveButtonText: {
-    fontSize: 18,
+
+  modalContainer: {
+    flex: 1,
+    flexDirection: "row",
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+
+  drawerSafeArea: {
+    width: "80%",
+    maxWidth: 330,
+    height: "100%",
+  },
+
+  drawer: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 4, height: 0 },
+    elevation: 12,
+  },
+
+  drawerHeader: {
+    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+  },
+
+  drawerTopRow: {
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  drawerTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#111827",
+  },
+
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  userSection: {
+    alignItems: "center",
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+  },
+
+  userText: {
+    marginTop: 6,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111",
+    color: "#111827",
   },
-  bottomGold: {
-    height: 28,
-    backgroundColor: "#9C8600",
+
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ECECEC",
+    backgroundColor: "#FFFFFF",
   },
-  bottomGreen: {
-    height: 24,
-    backgroundColor: "#2D7A1F",
+
+  menuText: {
+    marginLeft: 12,
+    flex: 1,
+    fontSize: 16,
+    color: "#111827",
+    fontWeight: "600",
+  },
+
+  drawerSpacer: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
   },
 });

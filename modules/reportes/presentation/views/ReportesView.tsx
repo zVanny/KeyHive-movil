@@ -5,18 +5,22 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { createReport } from "../../application/use-cases/createReport";
 import { SupabaseReporteRepository } from "../../infrastructure/repositories/SupabaseReporteRepository";
 import type { Reporte } from "../../domain/entities/Reporte";
 import { getReports } from "../../application/use-cases/getReportes";
+
+const { width } = Dimensions.get("window");
+const isSmallPhone = width < 380;
 
 function getTodayForInput(): string {
   const now = new Date();
@@ -49,6 +53,8 @@ function parseInputDateToDb(date: string): string | null {
 export default function ReportesView() {
   const router = useRouter();
   const reporteRepository = useMemo(() => new SupabaseReporteRepository(), []);
+
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [noCasillero, setNoCasillero] = useState("");
   const [fecha, setFecha] = useState(getTodayForInput());
@@ -131,126 +137,214 @@ export default function ReportesView() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar style="light" backgroundColor="#0E5A2B" />
 
-      <View style={styles.topGreen} />
+      <View style={styles.screen}>
+        <View style={styles.headerWrap}>
+          <View style={styles.topBar}>
+            <Pressable
+              onPress={() => setMenuOpen(true)}
+              style={styles.iconButton}
+            >
+              <Ionicons name="menu" size={30} color="white" />
+            </Pressable>
 
-      <View style={styles.topGold}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.push("./inicio");
-            }
-          }}
+            <Text style={styles.headerTitle}>Reportes</Text>
+
+            <View style={styles.iconButton} />
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.main}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="chevron-back" size={28} color="white" />
-          <Text style={styles.backText}>Regresar</Text>
-        </Pressable>
-      </View>
+          <View style={styles.mainCard}>
+            <Text style={styles.title}>Bandeja de Reportes</Text>
 
-      <ScrollView
-        style={styles.main}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Bandeja de Reportes</Text>
+            <View style={styles.sectionCard}>
+              <View style={styles.fieldRow}>
+                <Text style={styles.label}>No. Casillero</Text>
+                <TextInput
+                  value={noCasillero}
+                  onChangeText={setNoCasillero}
+                  keyboardType="numeric"
+                  placeholder="..."
+                  placeholderTextColor="#8B8B8B"
+                  style={styles.smallInput}
+                />
+              </View>
 
-        <View style={styles.sectionCard}>
-          <View style={styles.fieldRow}>
-            <Text style={styles.label}>No. Casillero:</Text>
-            <TextInput
-              value={noCasillero}
-              onChangeText={setNoCasillero}
-              keyboardType="numeric"
-              placeholder="..."
-              placeholderTextColor="#8B8B8B"
-              style={styles.smallInput}
-            />
-          </View>
-
-          <View style={styles.fieldRow}>
-            <Text style={styles.label}>Fecha:</Text>
-            <TextInput
-              value={fecha}
-              onChangeText={setFecha}
-              placeholder="DD/MM/AAAA"
-              placeholderTextColor="#8B8B8B"
-              style={styles.dateInput}
-            />
-            <Ionicons name="help-circle-outline" size={22} color="#111" />
-          </View>
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.sectionCard}>
-          <View style={styles.reportHeader}>
-            <Text style={styles.label}>Reporte:</Text>
-            <Ionicons name="help-circle-outline" size={22} color="#111" />
-          </View>
-
-          <TextInput
-            value={reporte}
-            onChangeText={setReporte}
-            placeholder="Motivo de reporte........"
-            placeholderTextColor="#7E7E7E"
-            multiline
-            textAlignVertical="top"
-            style={styles.textArea}
-          />
-
-          <Pressable
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#111" />
-            ) : (
-              <>
-                <Ionicons name="save-outline" size={28} color="#111" />
-                <Text style={styles.saveButtonText}>Guardar</Text>
-              </>
-            )}
-          </Pressable>
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.historyTitle}>Mis reportes recientes</Text>
-
-          {loading ? (
-            <View style={styles.centerState}>
-              <ActivityIndicator color="#0E5A2B" />
-            </View>
-          ) : misReportes.length === 0 ? (
-            <Text style={styles.emptyText}>Aún no has enviado reportes.</Text>
-          ) : (
-            misReportes.slice(0, 5).map((item) => (
-              <View key={item.id} style={styles.reportItem}>
-                <View style={styles.reportItemTop}>
-                  <Text style={styles.reportItemDate}>
-                    {formatDatePretty(item.fecha)}
-                  </Text>
-                  <Text style={styles.reportItemLocker}>
-                    Casillero: {item.noCasillero ?? "N/A"}
-                  </Text>
+              <View style={styles.fieldColumn}>
+                <View style={styles.rowLabel}>
+                  <Text style={styles.label}>Fecha</Text>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color="#6B7280"
+                  />
                 </View>
 
-                <Text style={styles.reportItemText}>{item.reporte}</Text>
+                <TextInput
+                  value={fecha}
+                  onChangeText={setFecha}
+                  placeholder="DD/MM/AAAA"
+                  placeholderTextColor="#8B8B8B"
+                  style={styles.dateInput}
+                />
               </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
+            </View>
 
-      <View style={styles.bottomGold} />
-      <View style={styles.bottomGreen} />
+            <View style={styles.sectionCard}>
+              <View style={styles.reportHeader}>
+                <Text style={styles.sectionTitle}>Reporte</Text>
+                <Ionicons
+                  name="document-text-outline"
+                  size={18}
+                  color="#6B7280"
+                />
+              </View>
+
+              <TextInput
+                value={reporte}
+                onChangeText={setReporte}
+                placeholder="Escribe aquí el motivo del reporte..."
+                placeholderTextColor="#7E7E7E"
+                multiline
+                textAlignVertical="top"
+                style={styles.textArea}
+              />
+
+              <Pressable
+                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="save-outline" size={22} color="#FFFFFF" />
+                    <Text style={styles.saveButtonText}>Guardar</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.historyTitle}>Mis reportes recientes</Text>
+
+              {loading ? (
+                <View style={styles.centerState}>
+                  <ActivityIndicator color="#0E5A2B" />
+                </View>
+              ) : misReportes.length === 0 ? (
+                <Text style={styles.emptyText}>Aún no has enviado reportes.</Text>
+              ) : (
+                misReportes.slice(0, 5).map((item) => (
+                  <View key={item.id} style={styles.reportItem}>
+                    <View style={styles.reportItemTop}>
+                      <Text style={styles.reportItemDate}>
+                        {formatDatePretty(item.fecha)}
+                      </Text>
+                      <Text style={styles.reportItemLocker}>
+                        Casillero: {item.noCasillero ?? "N/A"}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.reportItemText}>{item.reporte}</Text>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        </ScrollView>
+
+        {menuOpen && (
+          <View style={styles.drawerWrapper}>
+            <Pressable
+              style={styles.overlay}
+              onPress={() => setMenuOpen(false)}
+            />
+
+            <View style={styles.drawer}>
+              <View style={styles.drawerHeader}>
+                <View style={styles.drawerTopRow}>
+                  <Text style={styles.drawerTitle}>Menú</Text>
+
+                  <Pressable onPress={() => setMenuOpen(false)}>
+                    <Ionicons name="close" size={30} color="#111" />
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.userSection}>
+                <Ionicons name="person-circle" size={54} color="#0E5A2B" />
+                <Text style={styles.userText}>Usuario</Text>
+              </View>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/inicio");
+                }}
+              >
+                <Ionicons name="home-outline" size={20} color="#111" />
+                <Text style={styles.menuText}>Inicio</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/contactos");
+                }}
+              >
+                <Ionicons name="call-outline" size={20} color="#111" />
+                <Text style={styles.menuText}>Contactos</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/casilleros");
+                }}
+              >
+                <Ionicons name="cube-outline" size={20} color="#111" />
+                <Text style={styles.menuText}>Solicitación de Casillero</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/casilleros/mi-casillero");
+                }}
+              >
+                <Ionicons name="file-tray-full-outline" size={20} color="#111" />
+                <Text style={styles.menuText}>Ver mi Casillero</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.push("/reportes");
+                }}
+              >
+                <Ionicons name="document-text-outline" size={20} color="#111" />
+                <Text style={styles.menuText}>Reportes</Text>
+              </Pressable>
+
+              <View style={styles.drawerSpacer} />
+            </View>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -261,116 +355,160 @@ const styles = StyleSheet.create({
     backgroundColor: "#0E5A2B",
   },
 
-  topGreen: {
-    height: 88,
+  screen: {
+    flex: 1,
+    backgroundColor: "#F4F6F8",
+  },
+
+  headerWrap: {
     backgroundColor: "#0E5A2B",
+    paddingBottom: 10,
   },
 
-  topGold: {
-    height: 58,
+  topBar: {
+    minHeight: 62,
+    marginHorizontal: 14,
+    marginTop: 8,
     backgroundColor: "#9C8600",
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-
-  backButton: {
+    borderRadius: 18,
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    alignSelf: "flex-start",
+    paddingHorizontal: 14,
   },
 
-  backText: {
-    color: "white",
+  iconButton: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "700",
-    marginLeft: 4,
+    fontWeight: "800",
   },
 
   main: {
     flex: 1,
-    backgroundColor: "#ECECEC",
+    backgroundColor: "#F4F6F8",
   },
 
   scrollContent: {
     paddingBottom: 28,
   },
 
+  mainCard: {
+    backgroundColor: "#F4F6F8",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 18,
+    paddingTop: 22,
+    paddingBottom: 8,
+  },
+
   title: {
-    fontSize: 28,
+    fontSize: isSmallPhone ? 28 : 32,
     fontWeight: "900",
     textAlign: "center",
-    color: "#111",
-    marginTop: 22,
+    color: "#0F172A",
     marginBottom: 18,
   },
 
   sectionCard: {
-    paddingHorizontal: 24,
-    paddingVertical: 18,
-  },
-
-  separator: {
-    height: 1,
-    backgroundColor: "#8E8E8E",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
 
   fieldRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 18,
+    justifyContent: "space-between",
+    marginBottom: 16,
+    gap: 12,
+  },
+
+  fieldColumn: {
+    gap: 8,
+  },
+
+  rowLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 
   label: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  sectionTitle: {
     fontSize: 17,
-    color: "#111",
-    marginRight: 12,
+    fontWeight: "800",
+    color: "#111827",
   },
 
   smallInput: {
-    width: 92,
-    height: 36,
-    backgroundColor: "#D9D6D6",
+    width: 96,
+    height: 42,
+    backgroundColor: "#F3F4F6",
     borderRadius: 14,
     paddingHorizontal: 14,
     fontSize: 16,
-    color: "#111",
+    color: "#111827",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   dateInput: {
-    flex: 1,
-    height: 36,
-    backgroundColor: "#D9D6D6",
+    width: "100%",
+    minHeight: 42,
+    backgroundColor: "#F3F4F6",
     borderRadius: 14,
     paddingHorizontal: 14,
     fontSize: 16,
-    color: "#111",
-    marginRight: 10,
+    color: "#111827",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   reportHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
-    gap: 8,
+    marginBottom: 12,
+    gap: 6,
   },
 
   textArea: {
-    minHeight: 180,
-    backgroundColor: "#D9D6D6",
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    minHeight: 170,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: "#111",
+    color: "#111827",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   saveButton: {
-    marginTop: 26,
+    marginTop: 18,
     alignSelf: "center",
     minWidth: 170,
-    height: 56,
-    borderRadius: 22,
-    backgroundColor: "#D9D3D3",
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "#0E5A2B",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -383,15 +521,15 @@ const styles = StyleSheet.create({
   },
 
   saveButtonText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
 
   historyTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#111",
+    color: "#111827",
     marginBottom: 12,
   },
 
@@ -401,15 +539,15 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: "#666",
+    color: "#6B7280",
     fontSize: 15,
   },
 
   reportItem: {
-    backgroundColor: "#F7F7F7",
+    backgroundColor: "#FAFAFA",
     borderWidth: 1,
-    borderColor: "#DADADA",
-    borderRadius: 18,
+    borderColor: "#E5E7EB",
+    borderRadius: 16,
     padding: 14,
     marginBottom: 12,
   },
@@ -422,30 +560,102 @@ const styles = StyleSheet.create({
   },
 
   reportItemDate: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#9C8600",
   },
 
   reportItemLocker: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#0E5A2B",
   },
 
   reportItemText: {
     fontSize: 15,
-    color: "#111",
-    lineHeight: 22,
+    color: "#111827",
+    lineHeight: 21,
   },
 
-  bottomGold: {
-    height: 50,
-    backgroundColor: "#9C8600",
+  drawerWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row",
   },
 
-  bottomGreen: {
-    height: 35,
-    backgroundColor: "#2D7A1F",
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.28)",
+  },
+
+  drawer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: width * 0.78,
+    maxWidth: 320,
+    backgroundColor: "#F8FAFC",
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 3, height: 0 },
+    elevation: 10,
+  },
+
+  drawerHeader: {
+    paddingTop: 22,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+
+  drawerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  drawerTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#111827",
+  },
+
+  userSection: {
+    alignItems: "center",
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+
+  userText: {
+    marginTop: 6,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ECECEC",
+  },
+
+  menuText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#111827",
+    fontWeight: "600",
+  },
+
+  drawerSpacer: {
+    flex: 1,
   },
 });

@@ -10,4 +10,5 @@ export interface CasilleroRepository {
   getPerfilActual(): Promise<PerfilAlumno>;
   getMiCasillero(): Promise<MiCasillero | null>;
   crearSolicitudCasillero(data: CrearSolicitudCasilleroDto): Promise<void>;
+  darDeBajaMiCasillero(): Promise<void>;
 }
