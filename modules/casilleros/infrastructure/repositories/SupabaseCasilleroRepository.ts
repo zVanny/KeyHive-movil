@@ -171,17 +171,15 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       .eq("user_id", user.id)
       .in("estado", ["PENDIENTE", "ASIGNADO"])
       .order("created_at", { ascending: false })
-      .maybeSingle();
+      .limit(1);
 
     if (error) {
       throw new Error(error.message || "No se pudo consultar tu casillero.");
     }
 
-    if (!data) return null;
+    const row = ((data as unknown as MiSolicitudRow[] | null)?.[0] ?? null);
 
-    const row = data as unknown as MiSolicitudRow;
-
-    if (!row.casilleros) return null;
+    if (!row || !row.casilleros) return null;
 
     return {
       solicitudId: row.id,
@@ -231,7 +229,7 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       .select("id")
       .eq("casillero_id", data.casilleroId)
       .in("estado", ["PENDIENTE", "ASIGNADO"])
-      .maybeSingle();
+      .limit(1);
 
     if (bloqueoError) {
       throw new Error(
@@ -239,7 +237,7 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       );
     }
 
-    if (solicitudDeEseCasillero) {
+    if (solicitudDeEseCasillero && solicitudDeEseCasillero.length > 0) {
       throw new Error("Ese casillero ya fue solicitado por otro alumno.");
     }
 
@@ -256,6 +254,22 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       });
 
     if (insertError) {
+      const mensaje = insertError.message?.toLowerCase() ?? "";
+
+      if (
+        mensaje.includes("duplicate key value violates unique constraint") &&
+        mensaje.includes("solicitudes_casillero_unica_por_casillero")
+      ) {
+        throw new Error("Ese casillero ya tiene una solicitud activa.");
+      }
+
+      if (
+        mensaje.includes("duplicate key value violates unique constraint") &&
+        mensaje.includes("solicitudes_casillero_unica_por_usuario_activo")
+      ) {
+        throw new Error("Ya tienes una solicitud activa.");
+      }
+
       throw new Error(insertError.message || "No se pudo guardar la solicitud.");
     }
   }
@@ -269,17 +283,18 @@ export class SupabaseCasilleroRepository implements CasilleroRepository {
       .eq("user_id", user.id)
       .in("estado", ["PENDIENTE", "ASIGNADO"])
       .order("created_at", { ascending: false })
-      .maybeSingle();
+      .limit(1);
 
     if (solicitudError) {
       throw new Error(solicitudError.message || "No se pudo consultar tu solicitud.");
     }
 
-    if (!solicitudData) {
+    const solicitud = ((solicitudData as unknown as SolicitudActualRow[] | null)?.[0] ??
+      null) as SolicitudActualRow | null;
+
+    if (!solicitud) {
       throw new Error("No tienes un casillero o solicitud activa.");
     }
-
-    const solicitud = solicitudData as SolicitudActualRow;
 
     if (solicitud.estado === "ASIGNADO" && solicitud.casillero_id) {
       const { error: liberarCasilleroError } = await supabase

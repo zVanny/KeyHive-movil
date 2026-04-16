@@ -11,12 +11,16 @@ import {
   Text,
   TextInput,
   View,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { crearSolicitudCasillero } from "../../application/use-cases/crearSolicitudCasillero";
 import { getMiCasillero } from "../../application/use-cases/getMiCasillero";
 import type { PerfilAlumno } from "../../domain/entities/Casillero";
 import { SupabaseCasilleroRepository } from "../../infrastructure/repositories/SupabaseCasilleroRepository";
+
+const { width } = Dimensions.get("window");
+const isSmallPhone = width < 380;
 
 function formatDateInput(value: string) {
   const clean = value.replace(/\D/g, "").slice(0, 8);
@@ -39,7 +43,10 @@ function parseDateToDb(value: string): string | null {
 
 export default function SolicitarCasilleroView() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ casilleroId?: string; noCasillero?: string }>();
+  const params = useLocalSearchParams<{
+    casilleroId?: string;
+    noCasillero?: string;
+  }>();
   const repository = useMemo(() => new SupabaseCasilleroRepository(), []);
 
   const [perfil, setPerfil] = useState<PerfilAlumno | null>(null);
@@ -56,6 +63,7 @@ export default function SolicitarCasilleroView() {
       setLoading(true);
 
       const solicitudActual = await getMiCasillero(repository);
+
       if (solicitudActual) {
         Alert.alert(
           "Aviso",
@@ -74,7 +82,10 @@ export default function SolicitarCasilleroView() {
       setPerfil(perfilActual);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "No se pudieron cargar tus datos.";
+        error instanceof Error
+          ? error.message
+          : "No se pudieron cargar tus datos.";
+
       Alert.alert("Error", message);
     } finally {
       setLoading(false);
@@ -95,12 +106,18 @@ export default function SolicitarCasilleroView() {
     const fechaFinDb = parseDateToDb(fechaFin);
 
     if (!fechaInicioDb || !fechaFinDb) {
-      Alert.alert("Fechas inválidas", "Usa el formato DD/MM/AAAA en ambas fechas.");
+      Alert.alert(
+        "Fechas inválidas",
+        "Usa el formato DD/MM/AAAA en ambas fechas."
+      );
       return;
     }
 
     if (fechaFinDb < fechaInicioDb) {
-      Alert.alert("Fechas inválidas", "La fecha fin no puede ser anterior a la fecha inicio.");
+      Alert.alert(
+        "Fechas inválidas",
+        "La fecha fin no puede ser anterior a la fecha inicio."
+      );
       return;
     }
 
@@ -125,23 +142,41 @@ export default function SolicitarCasilleroView() {
       );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "No se pudo guardar la solicitud.";
-      Alert.alert("Error", message);
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar la solicitud.";
+
+      if (
+        message.includes("solicitudes_casillero_unica_por_casillero") ||
+        message.toLowerCase().includes("duplicate key value")
+      ) {
+        Alert.alert(
+          "Casillero no disponible",
+          "Ese casillero ya tiene una solicitud registrada. Elige otro casillero."
+        );
+      } else {
+        Alert.alert("Error", message);
+      }
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar style="light" backgroundColor="#0E5A2B" />
 
-      <View style={styles.topGreen} />
-      <View style={styles.topGold}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={28} color="white" />
-          <Text style={styles.backText}>Inicio</Text>
-        </Pressable>
+      <View style={styles.headerWrap}>
+        <View style={styles.topBar}>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            <Text style={styles.backText}>Volver</Text>
+          </Pressable>
+
+          <Text style={styles.headerTitle}>Solicitud</Text>
+
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
 
       <ScrollView
@@ -149,180 +184,320 @@ export default function SolicitarCasilleroView() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Datos del Alumno</Text>
-        <View style={styles.separator} />
+        <View style={styles.heroCard}>
+          <Text style={styles.title}>Datos del Alumno</Text>
+          <Text style={styles.subtitle}>
+            Revisa tu información y define el periodo para solicitar el
+            casillero.
+          </Text>
+        </View>
 
         {loading ? (
           <View style={styles.centerState}>
-            <ActivityIndicator color="#0E5A2B" />
+            <ActivityIndicator size="large" color="#0E5A2B" />
           </View>
         ) : (
-          <View style={styles.formSection}>
-            <View style={styles.row}>
-              <Text style={styles.label}>No. Casillero:</Text>
-              <View style={styles.smallBadge}>
-                <Text style={styles.badgeText}>{noCasillero}</Text>
+          <>
+            <View style={styles.sectionCard}>
+              <View style={styles.badgeRow}>
+                <Text style={styles.sectionTitle}>Casillero seleccionado</Text>
+                <View style={styles.smallBadge}>
+                  <Text style={styles.badgeText}>{noCasillero}</Text>
+                </View>
               </View>
             </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Nombre:</Text>
-              <TextInput
-                value={perfil?.nombre ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-              />
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Información personal</Text>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.label}>Nombre</Text>
+                <TextInput
+                  value={perfil?.nombre ?? ""}
+                  editable={false}
+                  style={[styles.input, styles.inputDisabled]}
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.label}>Correo</Text>
+                <TextInput
+                  value={perfil?.correo ?? ""}
+                  editable={false}
+                  style={[styles.input, styles.inputDisabled]}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.label}>Matrícula</Text>
+                <TextInput
+                  value={perfil?.matricula ?? ""}
+                  editable={false}
+                  style={[styles.input, styles.inputDisabled]}
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.label}>Carrera</Text>
+                <TextInput
+                  value={perfil?.carrera ?? ""}
+                  editable={false}
+                  style={[styles.input, styles.inputDisabled]}
+                />
+              </View>
             </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Correo:</Text>
-              <TextInput
-                value={perfil?.correo ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-                autoCapitalize="none"
-              />
-            </View>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Periodo solicitado</Text>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Matrícula:</Text>
-              <TextInput
-                value={perfil?.matricula ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-              />
-            </View>
+              <View style={styles.fieldBlock}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Fecha Inicio</Text>
+                  <Ionicons name="calendar-outline" size={18} color="#6B7280" />
+                </View>
+                <TextInput
+                  value={fechaInicio}
+                  onChangeText={(text) => setFechaInicio(formatDateInput(text))}
+                  placeholder="DD/MM/AAAA"
+                  placeholderTextColor="#878787"
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Carrera:</Text>
-              <TextInput
-                value={perfil?.carrera ?? ""}
-                editable={false}
-                style={[styles.input, styles.inputDisabled]}
-              />
-            </View>
+              <View style={styles.fieldBlock}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Fecha Fin</Text>
+                  <Ionicons name="calendar-outline" size={18} color="#6B7280" />
+                </View>
+                <TextInput
+                  value={fechaFin}
+                  onChangeText={(text) => setFechaFin(formatDateInput(text))}
+                  placeholder="DD/MM/AAAA"
+                  placeholderTextColor="#878787"
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Fecha Inicio:</Text>
-              <TextInput
-                value={fechaInicio}
-                onChangeText={(text) => setFechaInicio(formatDateInput(text))}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="#878787"
-                keyboardType="numeric"
-                style={styles.input}
-              />
+              <Pressable
+                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.saveButtonText}>Guardar solicitud</Text>
+                  </>
+                )}
+              </Pressable>
             </View>
-
-            <View style={styles.row}>
-              <Text style={styles.label}>Fecha Fin:</Text>
-              <TextInput
-                value={fechaFin}
-                onChangeText={(text) => setFechaFin(formatDateInput(text))}
-                placeholder="DD/MM/AAAA"
-                placeholderTextColor="#878787"
-                keyboardType="numeric"
-                style={styles.input}
-              />
-            </View>
-
-            <Pressable
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#111" />
-              ) : (
-                <Text style={styles.saveButtonText}>Guardar</Text>
-              )}
-            </Pressable>
-          </View>
+          </>
         )}
       </ScrollView>
-
-      <View style={styles.bottomGold} />
-      <View style={styles.bottomGreen} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#0E5A2B" },
-  topGreen: { height: 40, backgroundColor: "#0E5A2B" },
-  topGold: {
-    height: 30,
-    backgroundColor: "#9C8600",
-    justifyContent: "center",
-    paddingHorizontal: 18,
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#0E5A2B",
   },
-  backButton: {
+
+  headerWrap: {
+    backgroundColor: "#0E5A2B",
+    paddingBottom: 10,
+  },
+
+  topBar: {
+    minHeight: 62,
+    marginHorizontal: 14,
+    marginTop: 8,
+    backgroundColor: "#9C8600",
+    borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
   },
+
+  backButton: {
+    width: 90,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
   backText: {
-    color: "white",
-    fontSize: 17,
-    fontWeight: "700",
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
     marginLeft: 2,
   },
-  main: { flex: 1, backgroundColor: "#ECECEC" },
-  scrollContent: { paddingBottom: 28 },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+
+  headerSpacer: {
+    width: 90,
+  },
+
+  main: {
+    flex: 1,
+    backgroundColor: "#F4F6F8",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 22,
+    paddingBottom: 34,
+  },
+
+  heroCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
   title: {
-    fontSize: 28,
+    fontSize: isSmallPhone ? 28 : 32,
     fontWeight: "900",
     textAlign: "center",
-    color: "#111",
-    marginTop: 22,
-    marginBottom: 18,
+    color: "#0F172A",
+    marginBottom: 8,
   },
-  separator: { height: 1, backgroundColor: "#8F8F8F" },
-  centerState: { paddingVertical: 50, alignItems: "center" },
-  formSection: { paddingHorizontal: 20, paddingVertical: 24 },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
-  label: { width: 115, fontSize: 17, color: "#111" },
+
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: "center",
+    color: "#6B7280",
+    paddingHorizontal: 8,
+  },
+
+  centerState: {
+    paddingVertical: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  sectionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 14,
+  },
+
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
   smallBadge: {
-    width: 76,
-    height: 36,
-    backgroundColor: "#D9D6D6",
+    minWidth: 70,
+    height: 38,
+    backgroundColor: "#EEF2F7",
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
+
   badgeText: {
     fontSize: 16,
-    color: "#666",
-    fontWeight: "600",
+    color: "#374151",
+    fontWeight: "700",
   },
+
+  fieldBlock: {
+    marginBottom: 14,
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 8,
+  },
+
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
+
   input: {
-    flex: 1,
-    height: 36,
-    backgroundColor: "#D9D6D6",
+    width: "100%",
+    minHeight: 46,
+    backgroundColor: "#F3F4F6",
     borderRadius: 14,
     paddingHorizontal: 14,
     fontSize: 16,
-    color: "#111",
-    marginRight: 10,
+    color: "#111827",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  inputDisabled: { color: "#555" },
+
+  inputDisabled: {
+    color: "#6B7280",
+  },
+
   saveButton: {
-    marginTop: 44,
+    marginTop: 10,
     alignSelf: "center",
-    minWidth: 200,
-    height: 58,
-    borderRadius: 22,
-    backgroundColor: "#D9D3D3",
+    minWidth: 210,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: "#0E5A2B",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
+    flexDirection: "row",
+    gap: 8,
   },
-  saveButtonDisabled: { opacity: 0.7 },
+
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+
   saveButtonText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111",
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
-  bottomGold: { height: 28, backgroundColor: "#9C8600" },
-  bottomGreen: { height: 24, backgroundColor: "#2D7A1F" },
 });
